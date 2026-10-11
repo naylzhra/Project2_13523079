@@ -1,0 +1,10 @@
+D1: Tambah pesanan beserta detailnya
+PostgreSQL vs InfluxDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 7.47 ms
+  InfluxDB:   4.90 ms
+
+state: (orders, order_details) of the new order
+  before:  PostgreSQL (0, 0)  InfluxDB (0, 0)
+  applied: PostgreSQL (1, 2)  InfluxDB (1, 2)
+  data restored afterwards: yes

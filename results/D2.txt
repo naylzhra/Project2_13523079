@@ -1,0 +1,10 @@
+D2: Catat pembayaran pesanan
+PostgreSQL vs InfluxDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 4.81 ms
+  InfluxDB:   13.59 ms
+
+state: (status, payment_method, shipments) of the order
+  before:  PostgreSQL ('waiting_payment', None, 0)  InfluxDB ('waiting_payment', None, 0)
+  applied: PostgreSQL ('pickup', 'qris', 1)  InfluxDB ('pickup', 'qris', 1)
+  data restored afterwards: yes

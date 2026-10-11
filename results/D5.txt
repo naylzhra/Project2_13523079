@@ -1,0 +1,10 @@
+D5: Hapus pembacaan sensor sebelum tanggal tertentu
+PostgreSQL vs InfluxDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 12.24 ms
+  InfluxDB:   11.90 ms
+
+state: (readings before the cut-off,)
+  before:  PostgreSQL (4608,)  InfluxDB (4608,)
+  applied: PostgreSQL (0,)  InfluxDB (0,)
+  data restored afterwards: yes
