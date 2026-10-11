@@ -1,9 +1,9 @@
 D5: Hapus pembacaan sensor sebelum tanggal tertentu
 PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL  (applied, restored)
 time (1 run, database reverted afterwards)
-  PostgreSQL: 12.03 ms
-  InfluxDB:   19.08 ms
-  MongoDB:    5.73 ms
+  PostgreSQL: 19.15 ms
+  InfluxDB:   17.88 ms
+  MongoDB:    18.64 ms
 
 state: (readings before the cut-off,)
   before:  PostgreSQL (4608,)  InfluxDB (4608,)  MongoDB (4608,)
