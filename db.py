@@ -1,5 +1,6 @@
 import psycopg
 from influxdb_client import InfluxDBClient
+from pymongo import MongoClient
 
 import config
 
@@ -24,6 +25,15 @@ def influx_client():
         timeout=60_000,
     )
 
+def mongo_client():
+    return MongoClient(
+        host=config.MONGO_HOST,
+        port=config.MONGO_PORT,
+        username=config.MONGO_USER,
+        password=config.MONGO_PASSWORD,
+        tz_aware=True,
+    )
+
 
 if __name__ == "__main__":
     with pg_connect() as conn:
@@ -36,3 +46,8 @@ if __name__ == "__main__":
     with influx_client() as client:
         bucket = client.buckets_api().find_bucket_by_name(config.INFLUXDB_BUCKET)
         print(f"InfluxDB {client.version()}: bucket {bucket.name if bucket else 'MISSING'}")
+
+    with mongo_client() as client:
+        version = client.server_info()["version"]
+        names = client[config.MONGO_DB].list_collection_names()
+        print(f"MongoDB {version}: {len(names)} collections in {config.MONGO_DB}")

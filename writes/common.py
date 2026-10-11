@@ -31,6 +31,15 @@ def influx_rebuild(client):
     buckets.create_bucket(bucket_name=BUCKET, org_id=old.org_id, retention_rules=[])
     return influx_load(client)
 
+def mongo_rebuild_readings(db):
+    from load import CHUNK, mongo_create_readings, mongo_readings
+    db.machine_readings.drop()
+    mongo_create_readings(db)
+    docs = list(mongo_readings())
+    for i in range(0, len(docs), CHUNK):
+        db.machine_readings.insert_many(docs[i:i + CHUNK])
+    return len(docs)
+
 def flux_records(client, body):
     flux = f'from(bucket: "{BUCKET}")\n  |> {body}'
     return [rec.values for table in client.query_api().query(flux) for rec in table.records]

@@ -1,7 +1,7 @@
 # PostgreSQL vs InfluxDB: Laundry Database
 ## Setup
 ### Databases (Docker)
-PostgreSQL 18 dan InfluxDB 2.7.12 sama-sama berjalan di Docker, sehingga keduanya memiliki network path dan overhead VM yang sama selama benchmark. Jalankan perintah-perintah berikut di
+PostgreSQL 18, InfluxDB 2.7.12, dan MongoDB 8.0.4 sama-sama berjalan di Docker, sehingga ketiganya memiliki network path dan overhead VM yang sama selama benchmark. Jalankan perintah-perintah berikut di
 PowerShell dari direktori proyek dengan Docker Desktop running Linux containers.
 
 1. Salin environment template, jika belum memiliki `.env`:
@@ -9,19 +9,21 @@ PowerShell dari direktori proyek dengan Docker Desktop running Linux containers.
    Copy-Item .env.example .env
    ```
    Edit `.env` dan ubah placeholder kredensial (`INFLUXDB_USERNAME`,
-   `INFLUXDB_PASSWORD`, `INFLUXDB_TOKEN`, `PG_USER`, `PG_PASSWORD`).
+   `INFLUXDB_PASSWORD`, `INFLUXDB_TOKEN`, `PG_USER`, `PG_PASSWORD`, `MONGO_USER`,
+   `MONGO_PASSWORD`).
 
-2. Validasi konfigurasi, lalu jalankan kedua basis data:
+2. Validasi konfigurasi, lalu jalankan ketiga basis data:
    ```powershell
    docker compose config --quiet
    docker compose up -d --wait
    docker compose ps
    ```
-   Kedua service seharusnya berstatus `healthy`.
+   Ketiga service seharusnya berstatus `healthy`.
    | Service | Host address | Data volume |
    |---|---|---|
    | `postgres` | `127.0.0.1:5433` | `postgres_data` |
    | `influxdb` | `127.0.0.1:8086` | `influxdb_data`, `influxdb_config` |
+   | `mongo` | `127.0.0.1:27017` | `mongo_data` |
    UI InfluxDB tersedia di <http://127.0.0.1:8086>; masuk dengan username dan password dari `.env`.
 
 3. Verifikasi PostgreSQL:
@@ -37,7 +39,7 @@ PowerShell dari direktori proyek dengan Docker Desktop running Linux containers.
    Health seharusnya menampilkan `status: pass` dan versi `2.7.12`. Daftar bucket
    seharusnya memuat `laundry_metrics` dengan retention `infinite`.
 
-Untuk menghentikan kedua service tanpa menghapus datanya, gunakan `docker compose down`. 
+Untuk menghentikan ketiga service tanpa menghapus datanya, gunakan `docker compose down`. 
 Untuk menghapus semua datanya tambahkan `--volumes`.
 
 
@@ -51,17 +53,17 @@ python -m pip freeze > requirements.lock.txt
 ```
 
 ## Data
-Jalankan dari direktori proyek dengan virtual environment aktif dan kedua basis data berjalan.
+Jalankan dari direktori proyek dengan virtual environment aktif dan ketiga basis data berjalan.
 1. Generate the 30-day synthetic dataset (seed 42) into `data/*.csv`:
    ```powershell
    python generator.py
    ```
 
-2. Load file-file tersebut ke PostgreSQL dan InfluxDB:
+2. Load file-file tersebut ke PostgreSQL, InfluxDB, dan MongoDB:
    ```powershell
    python load.py
    ```
-   `python load.py --reset` akan menghapus **semua** baris di delapan tabel dan **semua** point di `laundry_metrics`.
+   `python load.py --reset` akan menghapus **semua** baris di delapan tabel **semua** point di `laundry_metrics`, dan **semua** collection di database MongoDB `laundry`.
 
 ## Read queries
 Jalankan read query:
@@ -99,3 +101,11 @@ python writes.py D2 D4 # hanya query yang disebutkan
 | D5 | Menghapus machine readings yang lebih lama dari suatu tanggal | readings sebelum 2026-09-02 (4,608) |
 
 Setiap operasi dijalankan **sekali** di setiap basis data (diukur waktunya), dan basis data langsung dikembalikan ke kondisi semula setelahnya. Hasil setiap operasi kemudian ditulis ke `results/<name>.txt`
+
+## Perbandingan dengan MongoDB
+Tambahkan `--mongo` untuk menjalankan query read dan write operations yang sama di PostgreSQL, InfluxDB, dan MongoDB. Hasilnya akan ditulis ke `results_mongo/<name>.txt`:
+```powershell
+python queries.py --mongo         # semua query read
+python queries.py --mongo R4 R7   # hanya query yang disebutkan
+python writes.py --mongo          # semua write operations
+```

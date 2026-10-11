@@ -7,7 +7,7 @@ from influxdb_client import WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 import config
-from db import influx_client, pg_connect
+from db import influx_client, mongo_client, pg_connect
 
 TABLES = ["customers", "services", "machines", "orders", "order_details", "shipments", "wash_runs", "machine_readings"]
 IDENTITY = {"customers": "customer_id", "services": "service_id", "machines": "machine_id", "orders": "order_id", "shipments": "shipment_id", "wash_runs": "run_id"}
@@ -85,6 +85,82 @@ def influx_lines():
                f'temperature_c={r["temperature_c"]},power_w={r["power_w"]}{water},rpm={r["rpm"]}i '
                f'{epoch(r["recorded_at"])}')
 
+def at(iso):
+    return datetime.fromisoformat(iso) if iso else None
+
+def mongo_orders():
+    services = {r["service_id"]: r["service_name"] for r in read_csv("services")}
+    orders = {}
+    for o in read_csv("orders"):
+        payment = {"method": o["payment_method"], "time": at(o["payment_time"])} if o["payment_time"] else None
+        orders[o["order_id"]] = {
+            "_id": int(o["order_id"]), "customer_id": int(o["customer_id"]), "status": o["status"],
+            "order_time": at(o["order_time"]), "completed_at": at(o["completed_at"]),
+            "total_amount": int(o["total_amount"]), "payment": payment, "details": [], "shipments": []}
+    for d in read_csv("order_details"):
+        orders[d["order_id"]]["details"].append({
+            "detail_no": int(d["detail_no"]), "service_id": int(d["service_id"]),
+            "service_name": services[d["service_id"]], "weight_kg": float(d["weight_kg"]),
+            "subtotal": int(d["subtotal"])})
+    for s in read_csv("shipments"):
+        orders[s["order_id"]]["shipments"].append({
+            "shipment_id": int(s["shipment_id"]), "shipment_type": s["shipment_type"],
+            "shipment_status": s["shipment_status"], "created_at": at(s["created_at"])})
+    return list(orders.values())
+
+def mongo_readings():
+    machines = {r["machine_id"]: r["machine_type"] for r in read_csv("machines")}
+    for r in read_csv("machine_readings"):
+        doc = {"recorded_at": at(r["recorded_at"]),
+               "machine": {"machine_id": int(r["machine_id"]), "machine_type": machines[r["machine_id"]]},
+               "temperature_c": float(r["temperature_c"]), "power_w": float(r["power_w"]),
+               "rpm": int(r["rpm"])}
+        if r["water_lpm"]:
+            doc["water_lpm"] = float(r["water_lpm"])
+        yield doc
+
+def mongo_create_readings(db):
+    db.create_collection("machine_readings", timeseries={
+        "timeField": "recorded_at", "metaField": "machine", "granularity": "minutes"})
+    db.machine_readings.create_index([("machine.machine_id", 1), ("recorded_at", 1)])
+
+def mongo_has_data(db):
+    return bool(db.list_collection_names(filter={"name": {"$regex": "^(?!system[.])"}}))
+
+def mongo_load(db):
+    services = {r["service_id"]: r["service_name"] for r in read_csv("services")}
+    machines = {r["machine_id"]: r["machine_type"] for r in read_csv("machines")}
+    db.customers.insert_many([{"_id": int(c["customer_id"]), "name": c["name"],
+                               "phone_number": c["phone_number"], "address": c["address"]}
+                              for c in read_csv("customers")])
+    db.services.insert_many([{"_id": int(s["service_id"]), "service_name": s["service_name"],
+                              "price": int(s["price"])} for s in read_csv("services")])
+    db.machines.insert_many([{"_id": int(m["machine_id"]), "machine_name": m["machine_name"],
+                              "machine_type": m["machine_type"],
+                              "installed_at": at(m["installed_at"] + "T00:00:00Z")}
+                             for m in read_csv("machines")])
+    orders = mongo_orders()
+    db.orders.insert_many(orders)
+    detail_service = {(o["_id"], d["detail_no"]): d["service_name"] for o in orders for d in o["details"]}
+    db.wash_runs.insert_many([{
+        "_id": int(r["run_id"]), "machine_id": int(r["machine_id"]),
+        "machine_type": machines[r["machine_id"]], "order_id": int(r["order_id"]),
+        "detail_no": int(r["detail_no"]),
+        "service_name": detail_service[(int(r["order_id"]), int(r["detail_no"]))],
+        "start_time": at(r["start_time"]), "end_time": at(r["end_time"])} for r in read_csv("wash_runs")])
+    mongo_create_readings(db)
+    batch, total = [], 0
+    for doc in mongo_readings():
+        batch.append(doc)
+        if len(batch) == CHUNK:
+            db.machine_readings.insert_many(batch)
+            total += len(batch)
+            batch = []
+    if batch:
+        db.machine_readings.insert_many(batch)
+        total += len(batch)
+    return total
+
 def influx_has_data(client):
     tables = client.query_api().query(
         f'from(bucket: "{config.INFLUXDB_BUCKET}") |> range(start: 0) |> limit(n: 1)')
@@ -104,17 +180,19 @@ def influx_load(client):
         total += len(batch)
     return total
 
-def reset(conn, client):
+def reset(conn, client, mongo):
     conn.execute(f"TRUNCATE {', '.join(TABLES)} RESTART IDENTITY")
     conn.commit()
     client.delete_api().delete("1970-01-01T00:00:00Z", "2100-01-01T00:00:00Z", "", bucket=config.INFLUXDB_BUCKET, org=config.INFLUXDB_ORG)
+    mongo.drop_database(config.MONGO_DB)
 
 def main():
-    with pg_connect() as conn, influx_client() as client:
+    with pg_connect() as conn, influx_client() as client, mongo_client() as mongo:
+        db = mongo[config.MONGO_DB]
         if "--reset" in sys.argv:
-            reset(conn, client)
-            print("reset: all PostgreSQL rows and InfluxDB points deleted")
-        elif pg_has_data(conn) or influx_has_data(client):
+            reset(conn, client, mongo)
+            print("reset: all PostgreSQL rows, InfluxDB points and MongoDB collections deleted")
+        elif pg_has_data(conn) or influx_has_data(client) or mongo_has_data(db):
             sys.exit("Databases already contain data. Run with --reset to delete it and reload.")
 
         t0 = time.perf_counter()
@@ -122,8 +200,11 @@ def main():
         t1 = time.perf_counter()
         points = influx_load(client)
         t2 = time.perf_counter()
+        readings = mongo_load(db)
+        t3 = time.perf_counter()
     print(f"PostgreSQL: {len(TABLES)} tables loaded in {t1 - t0:.1f} s")
     print(f"InfluxDB:   {points} points written in {t2 - t1:.1f} s")
+    print(f"MongoDB:    5 collections + {readings} readings loaded in {t3 - t2:.1f} s")
 
 if __name__ == "__main__":
     main()

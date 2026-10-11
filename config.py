@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -15,5 +16,13 @@ INFLUXDB_TOKEN = os.environ["INFLUXDB_TOKEN"]
 INFLUXDB_ORG = os.environ["INFLUXDB_ORG"]
 INFLUXDB_BUCKET = os.environ["INFLUXDB_BUCKET"]
 
+MONGO_HOST = os.environ["MONGO_HOST"]
+MONGO_PORT = int(os.environ["MONGO_PORT"])
+MONGO_DB = os.environ["MONGO_DB"]
+MONGO_USER = os.environ["MONGO_USER"]
+MONGO_PASSWORD = os.environ["MONGO_PASSWORD"]
+
 START = "2026-09-01T00:00:00Z"
 STOP = "2026-10-01T00:00:00Z"
+START_AT = datetime.fromisoformat(START)
+STOP_AT = datetime.fromisoformat(STOP)
