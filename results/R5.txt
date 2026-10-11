@@ -1,0 +1,12 @@
+R5: Jumlah pesanan per status
+rows: 5  PostgreSQL vs InfluxDB: IDENTICAL
+time over 5 runs (after 1 untimed warm-up run)
+  PostgreSQL: avg 1.56 ms  (runs: 1.77, 1.69, 1.49, 1.41, 1.42)
+  InfluxDB:   avg 9.83 ms  (runs: 12.25, 10.32, 8.74, 8.52, 9.34)
+
+status | total_order
+completed | 2175
+delivery | 6
+pickup | 4
+processing | 6
+waiting_payment | 137

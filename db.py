@@ -12,6 +12,7 @@ def pg_connect():
         user=config.PG_USER,
         password=config.PG_PASSWORD,
         options="-c TimeZone=UTC",
+        prepare_threshold=None,
     )
 
 

@@ -21,6 +21,32 @@ services:
       retries: 12
       start_period: 30s
 
+  postgres:
+    image: postgres:18
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: ${PG_DB:?Set PG_DB in .env}
+      POSTGRES_USER: ${PG_USER:?Set PG_USER in .env}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Set PG_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./sql/01_customers.sql:/docker-entrypoint-initdb.d/01_customers.sql:ro
+      - ./sql/02_services.sql:/docker-entrypoint-initdb.d/02_services.sql:ro
+      - ./sql/03_orders.sql:/docker-entrypoint-initdb.d/03_orders.sql:ro
+      - ./sql/04_order_details.sql:/docker-entrypoint-initdb.d/04_order_details.sql:ro
+      - ./sql/05_shipments.sql:/docker-entrypoint-initdb.d/05_shipments.sql:ro
+      - ./sql/06_machines.sql:/docker-entrypoint-initdb.d/06_machines.sql:ro
+      - ./sql/07_wash_runs.sql:/docker-entrypoint-initdb.d/07_wash_runs.sql:ro
+      - ./sql/08_machine_readings.sql:/docker-entrypoint-initdb.d/08_machine_readings.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
 volumes:
   influxdb_data:
   influxdb_config:
+  postgres_data:

@@ -1,0 +1,10 @@
+R4: Jumlah total pemasukan per jenis layanan
+rows: 3  PostgreSQL vs InfluxDB: IDENTICAL
+time over 5 runs (after 1 untimed warm-up run)
+  PostgreSQL: avg 3.27 ms  (runs: 3.04, 2.88, 4.44, 2.91, 3.10)
+  InfluxDB:   avg 409.73 ms  (runs: 417.94, 440.73, 443.86, 372.44, 373.68)
+
+service_name | revenue
+Bedcover & linen | 23902500
+Express wash & fold | 38744400
+Regular wash & fold | 53257400
