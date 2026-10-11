@@ -1,4 +1,4 @@
-from config import INFLUXDB_BUCKET as BUCKET, START, STOP
+from config import INFLUXDB_BUCKET as BUCKET, START, START_AT, STOP, STOP_AT
 
 QUERY = {
     "title": "Jumlah total pemasukan per jenis layanan",
@@ -32,5 +32,15 @@ QUERY = {
           |> sum(column: "subtotal")
     """,
     "flux_columns": ["service_name", "subtotal"],
+    "mongo": {
+        "collection": "orders",
+        "pipeline": [
+            {"$match": {"order_time": {"$gte": START_AT, "$lt": STOP_AT}, "payment": {"$ne": None}}},
+            {"$unwind": "$details"},
+            {"$group": {"_id": "$details.service_name", "revenue": {"$sum": "$details.subtotal"}}},
+            {"$project": {"_id": 0, "service_name": "$_id", "revenue": 1}},
+            {"$sort": {"service_name": 1}},
+        ],
+    },
     "columns": ["service_name", "revenue"],
 }

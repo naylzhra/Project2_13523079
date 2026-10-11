@@ -1,0 +1,11 @@
+R7: Total energi per jenis layanan
+rows: 3  PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL
+time over 5 runs (after 1 untimed warm-up run)
+  PostgreSQL: avg 299.45 ms  (runs: 301.21, 278.23, 273.30, 325.72, 318.79)
+  InfluxDB:   avg 1434.56 ms  (runs: 1491.87, 1539.87, 1285.20, 1386.66, 1469.20)
+  MongoDB:    avg 1959.13 ms  (runs: 1998.66, 1916.20, 1929.28, 2007.81, 1943.70)
+
+service_name | energy_kwh
+Bedcover & linen | 1811.8700833333332
+Express wash & fold | 1542.1542833333333
+Regular wash & fold | 4051.7441166666667

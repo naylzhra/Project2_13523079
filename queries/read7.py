@@ -1,4 +1,4 @@
-from config import INFLUXDB_BUCKET as BUCKET, START, STOP
+from config import INFLUXDB_BUCKET as BUCKET, START, START_AT, STOP, STOP_AT
 
 QUERY = {
     "title": "Total energi per jenis layanan",
@@ -54,6 +54,36 @@ QUERY = {
           |> map(fn: (r) => ({{service_name: r.service_name, energy_kwh: r._value / 1000.0}}))
     """,
     "flux_columns": ["service_name", "energy_kwh"],
+    "mongo": {
+        "collection": "wash_runs",
+        "pipeline": [
+            {"$match": {"start_time": {"$gte": START_AT, "$lt": STOP_AT}}},
+            {"$lookup": {
+                "from": "machine_readings",
+                "localField": "machine_id",
+                "foreignField": "machine.machine_id",
+                "let": {"start": "$start_time", "end": "$end_time"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$and": [{"$gte": ["$recorded_at", "$$start"]},
+                                                   {"$lt": ["$recorded_at", "$$end"]}]}}},
+                    {"$project": {"_id": 0, "recorded_at": 1, "power_w": 1}},
+                ],
+                "as": "readings"}},
+            {"$unwind": "$readings"},
+            {"$setWindowFields": {
+                "partitionBy": "$_id",
+                "sortBy": {"readings.recorded_at": 1},
+                "output": {"next_at": {"$shift": {"output": "$readings.recorded_at", "by": 1}},
+                           "next_power_w": {"$shift": {"output": "$readings.power_w", "by": 1}}}}},
+            {"$match": {"next_at": {"$ne": None}}},
+            {"$group": {"_id": "$service_name", "energy_ws": {"$sum": {"$multiply": [
+                {"$divide": [{"$add": ["$readings.power_w", "$next_power_w"]}, 2]},
+                {"$divide": [{"$subtract": ["$next_at", "$readings.recorded_at"]}, 1000]}]}}}},
+            {"$project": {"_id": 0, "service_name": "$_id",
+                          "energy_kwh": {"$divide": ["$energy_ws", 3600000]}}},
+            {"$sort": {"service_name": 1}},
+        ],
+    },
     "columns": ["service_name", "energy_kwh"],
     "tolerance": 1e-6,
 }

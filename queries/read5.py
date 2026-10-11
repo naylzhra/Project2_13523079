@@ -1,4 +1,4 @@
-from config import INFLUXDB_BUCKET as BUCKET, START, STOP
+from config import INFLUXDB_BUCKET as BUCKET, START, START_AT, STOP, STOP_AT
 
 QUERY = {
     "title": "Jumlah pesanan per status",
@@ -18,5 +18,14 @@ QUERY = {
           |> count()
     """,
     "flux_columns": ["status", "_value"],
+    "mongo": {
+        "collection": "orders",
+        "pipeline": [
+            {"$match": {"order_time": {"$gte": START_AT, "$lt": STOP_AT}}},
+            {"$group": {"_id": "$status", "total_order": {"$sum": 1}}},
+            {"$project": {"_id": 0, "status": "$_id", "total_order": 1}},
+            {"$sort": {"status": 1}},
+        ],
+    },
     "columns": ["status", "total_order"],
 }

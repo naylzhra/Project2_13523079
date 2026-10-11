@@ -1,0 +1,13 @@
+R5: Jumlah pesanan per status
+rows: 5  PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL
+time over 5 runs (after 1 untimed warm-up run)
+  PostgreSQL: avg 1.88 ms  (runs: 2.43, 1.62, 1.97, 1.61, 1.76)
+  InfluxDB:   avg 11.81 ms  (runs: 11.67, 13.03, 10.05, 10.85, 13.46)
+  MongoDB:    avg 3.31 ms  (runs: 3.46, 3.48, 3.08, 3.44, 3.09)
+
+status | total_order
+completed | 2175
+delivery | 6
+pickup | 4
+processing | 6
+waiting_payment | 137
