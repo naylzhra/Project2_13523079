@@ -1,5 +1,5 @@
 import config
-from load import influx_lines, read_csv
+from load import influx_lines, mongo_readings, read_csv
 from .common import at, flux_count, influx_delete, influx_write
 
 START = at(config.START)
@@ -40,10 +40,20 @@ def pg_state(conn, ctx):
 def flux_state(client, ctx):
     return (flux_count(client, "machine_reading", "power_w", START, CUTOFF),)
 
+def mongo(db, ctx):
+    db.machine_readings.delete_many({"recorded_at": {"$lt": CUTOFF}})
+
+def mongo_undo(db, ctx):
+    db.machine_readings.insert_many([doc for doc in mongo_readings() if doc["recorded_at"] < CUTOFF])
+
+def mongo_state(db, ctx):
+    return (db.machine_readings.count_documents({"recorded_at": {"$gte": START, "$lt": CUTOFF}}),)
+
 
 WRITE = {
     "title": "Hapus pembacaan sensor sebelum tanggal tertentu",
     "state": "(readings before the cut-off,)",
     "setup": setup, "pg": pg, "flux": flux, "pg_undo": pg_undo, "flux_undo": flux_undo,
     "pg_state": pg_state, "flux_state": flux_state,
+    "mongo": mongo, "mongo_undo": mongo_undo, "mongo_state": mongo_state,
 }

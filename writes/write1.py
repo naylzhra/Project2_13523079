@@ -61,10 +61,27 @@ def flux_state(client, ctx):
     return (flux_count(client, "order", "order_id", ORDER_TIME, end, ctx["order_id"]),
             flux_count(client, "order_detail", "order_id", ORDER_TIME, end, ctx["order_id"]))
 
+def mongo(db, ctx):
+    db.orders.insert_one({
+        "_id": ctx["order_id"], "customer_id": CUSTOMER_ID, "status": "waiting_payment",
+        "order_time": ORDER_TIME, "completed_at": None, "total_amount": ctx["total"],
+        "payment": None, "shipments": [],
+        "details": [{"detail_no": no, "service_id": sid, "service_name": name,
+                     "weight_kg": float(kg), "subtotal": sub}
+                    for no, name, sid, kg, sub in ctx["details"]]})
+
+def mongo_undo(db, ctx):
+    db.orders.delete_one({"_id": ctx["order_id"]})
+
+def mongo_state(db, ctx):
+    doc = db.orders.find_one({"_id": ctx["order_id"]})
+    return (1, len(doc["details"])) if doc else (0, 0)
+
 
 WRITE = {
     "title": "Tambah pesanan beserta detailnya",
     "state": "(orders, order_details) of the new order",
     "setup": setup, "pg": pg, "flux": flux, "pg_undo": pg_undo, "flux_undo": flux_undo,
     "pg_state": pg_state, "flux_state": flux_state,
+    "mongo": mongo, "mongo_undo": mongo_undo, "mongo_state": mongo_state,
 }

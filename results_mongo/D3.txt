@@ -1,0 +1,11 @@
+D3: Masukkan satu jam pembacaan sensor mesin (192 baris)
+PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 22.13 ms
+  InfluxDB:   7.63 ms
+  MongoDB:    7.62 ms
+
+state: (readings in the hour after the dataset,)
+  before:  PostgreSQL (0,)  InfluxDB (0,)  MongoDB (0,)
+  applied: PostgreSQL (192,)  InfluxDB (192,)  MongoDB (192,)
+  data restored afterwards: yes

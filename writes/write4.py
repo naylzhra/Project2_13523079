@@ -38,6 +38,19 @@ def flux_state(client, ctx):
                        and (r._field == "temperature_c" or r._field == "power_w"))""")}
     return (fields.get("temperature_c"), fields.get("power_w"))
 
+def mongo_set(db, values):
+    match = {"machine.machine_id": MACHINE_ID, "recorded_at": RECORDED_AT}
+    doc = db.machine_readings.find_one(match, {"_id": 0})
+    if doc is None:
+        raise RuntimeError("reading to correct not found")
+    temp, power = values
+    db.machine_readings.delete_many(match)
+    db.machine_readings.insert_one({**doc, "temperature_c": float(temp), "power_w": float(power)})
+
+def mongo_state(db, ctx):
+    doc = db.machine_readings.find_one({"machine.machine_id": MACHINE_ID, "recorded_at": RECORDED_AT})
+    return (doc["temperature_c"], doc["power_w"]) if doc else (None, None)
+
 
 WRITE = {
     "title": "Koreksi satu pembacaan sensor",
@@ -47,5 +60,7 @@ WRITE = {
     "flux": lambda client, ctx: flux_set(client, ctx, CORRECTED),
     "pg_undo": lambda conn, ctx: pg_set(conn, ctx["original"]),
     "flux_undo": lambda client, ctx: flux_set(client, ctx, ctx["original"]),
-    "pg_state": pg_state, "flux_state": flux_state,
+    "mongo": lambda db, ctx: mongo_set(db, CORRECTED),
+    "mongo_undo": lambda db, ctx: mongo_set(db, ctx["original"]),
+    "pg_state": pg_state, "flux_state": flux_state, "mongo_state": mongo_state,
 }

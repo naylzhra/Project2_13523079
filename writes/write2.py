@@ -73,10 +73,30 @@ def flux_state(client, ctx):
             payment[0]["payment_method"] if payment else None,
             len(shipments))
 
+def mongo(db, ctx):
+    updated = db.orders.update_one(
+        {"_id": ctx["order_id"], "status": "waiting_payment"},
+        {"$set": {"status": "pickup", "payment": {"method": METHOD, "time": PAY_TIME}},
+         "$push": {"shipments": {"shipment_id": ctx["shipment_id"], "shipment_type": "pickup",
+                                 "shipment_status": "pending", "created_at": PAY_TIME}}}).matched_count
+    if updated != 1:
+        raise RuntimeError(f"order {ctx['order_id']} is not waiting for payment")
+
+def mongo_undo(db, ctx):
+    db.orders.update_one(
+        {"_id": ctx["order_id"]},
+        {"$set": {"status": "waiting_payment", "payment": None},
+         "$pull": {"shipments": {"shipment_id": ctx["shipment_id"]}}})
+
+def mongo_state(db, ctx):
+    doc = db.orders.find_one({"_id": ctx["order_id"]})
+    return (doc["status"], doc["payment"]["method"] if doc["payment"] else None, len(doc["shipments"]))
+
 
 WRITE = {
     "title": "Catat pembayaran pesanan",
     "state": "(status, payment_method, shipments) of the order",
     "setup": setup, "pg": pg, "flux": flux, "pg_undo": pg_undo, "flux_undo": flux_undo,
     "pg_state": pg_state, "flux_state": flux_state,
+    "mongo": mongo, "mongo_undo": mongo_undo, "mongo_state": mongo_state,
 }

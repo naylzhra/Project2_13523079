@@ -1,0 +1,11 @@
+D1: Tambah pesanan beserta detailnya
+PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 10.70 ms
+  InfluxDB:   6.82 ms
+  MongoDB:    1.83 ms
+
+state: (orders, order_details) of the new order
+  before:  PostgreSQL (0, 0)  InfluxDB (0, 0)  MongoDB (0, 0)
+  applied: PostgreSQL (1, 2)  InfluxDB (1, 2)  MongoDB (1, 2)
+  data restored afterwards: yes

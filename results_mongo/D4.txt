@@ -1,0 +1,11 @@
+D4: Koreksi satu pembacaan sensor
+PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 4.42 ms
+  InfluxDB:   4.84 ms
+  MongoDB:    7.84 ms
+
+state: (temperature_c, power_w) of the reading
+  before:  PostgreSQL (28.9, 669.7)  InfluxDB (28.9, 669.7)  MongoDB (28.9, 669.7)
+  applied: PostgreSQL (45.0, 2000.0)  InfluxDB (45.0, 2000.0)  MongoDB (45.0, 2000.0)
+  data restored afterwards: yes

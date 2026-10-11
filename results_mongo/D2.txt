@@ -1,0 +1,11 @@
+D2: Catat pembayaran pesanan
+PostgreSQL vs InfluxDB: IDENTICAL  PostgreSQL vs MongoDB: IDENTICAL  (applied, restored)
+time (1 run, database reverted afterwards)
+  PostgreSQL: 4.88 ms
+  InfluxDB:   10.73 ms
+  MongoDB:    2.19 ms
+
+state: (status, payment_method, shipments) of the order
+  before:  PostgreSQL ('waiting_payment', None, 0)  InfluxDB ('waiting_payment', None, 0)  MongoDB ('waiting_payment', None, 0)
+  applied: PostgreSQL ('pickup', 'qris', 1)  InfluxDB ('pickup', 'qris', 1)  MongoDB ('pickup', 'qris', 1)
+  data restored afterwards: yes

@@ -46,10 +46,27 @@ def pg_state(conn, ctx):
 def flux_state(client, ctx):
     return (flux_count(client, "machine_reading", "power_w", START, END),)
 
+def mongo(db, ctx):
+    docs = []
+    for mid, mtype, t, temp, power, water, rpm in ctx["rows"]:
+        doc = {"recorded_at": t, "machine": {"machine_id": mid, "machine_type": mtype},
+               "temperature_c": temp, "power_w": power, "rpm": rpm}
+        if water is not None:
+            doc["water_lpm"] = water
+        docs.append(doc)
+    db.machine_readings.insert_many(docs)
+
+def mongo_undo(db, ctx):
+    db.machine_readings.delete_many({"recorded_at": {"$gte": START, "$lt": END}})
+
+def mongo_state(db, ctx):
+    return (db.machine_readings.count_documents({"recorded_at": {"$gte": START, "$lt": END}}),)
+
 
 WRITE = {
     "title": "Masukkan satu jam pembacaan sensor mesin (192 baris)",
     "state": "(readings in the hour after the dataset,)",
     "setup": setup, "pg": pg, "flux": flux, "pg_undo": pg_undo, "flux_undo": flux_undo,
     "pg_state": pg_state, "flux_state": flux_state,
+    "mongo": mongo, "mongo_undo": mongo_undo, "mongo_state": mongo_state,
 }
